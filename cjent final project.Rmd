@@ -1,13 +1,15 @@
 ---
 title: "Final Project"
 output:
-  word_document: default
   pdf_document: default
+  word_document: default
+  html_document:
+    df_print: paged
 ---
 
 
-**Name**: Cameron Jent
-**G Number**: G01098664
+**Name**: Gathu Macharia
+
 
 ```{r}
 #install.packages("vip")
@@ -18,7 +20,7 @@ output:
 options(dplyr.summarise.inform = FALSE)
 
 ## Add R libraries here
-library(tidyverse)
+#library(tidyverse)
 library(tidymodels)
 library(klaR)
 library(kknn)
@@ -26,10 +28,11 @@ library(discrim)
 library(vip)
 library(rpart.plot)
 library(ranger)
+library(readr)
 
 
 # Load data
-loans_df <- read_rds("C:/Users/cjent/OneDrive/Desktop/Classes/Spring 2022/MIS 431/Final Project/loan_data.rds")
+loans_df <- read_rds("/home/gathu/Documents/CLASSES/data science/datascience with r/logistic  bank default/default/Bank-Loan-Analysis-Using-R/loan_data.rds")
 
 ```
 
@@ -215,8 +218,14 @@ logistic_fit <- logistic_wf %>%
 logistic_results <- logistic_fit %>%
   collect_predictions()
 
-#ROC Curve
-roc_curve(logistic_results, truth = loan_default, estimate = .pred_yes) %>% autoplot()
+
+# Assuming logistic_results is your data frame
+roc_curve_data <- roc_curve(logistic_results, 
+                             truth = loan_default, 
+                             .pred_yes)
+
+# Plotting the ROC curve
+autoplot(roc_curve_data)
 
 #ROC Area Under Curve
 roc_auc(logistic_results, truth = loan_default, .pred_yes)
@@ -251,7 +260,8 @@ knn_tuning <- knn_wf %>%
   tune_grid(resamples = loans_folds, grid = k_grid)
 
 #Show the top 5 best models for ROC AUC
-knn_tuning %>% show_best('roc_auc')
+# Show the top 5 best models for ROC AUC
+knn_tuning %>% show_best(metric = "roc_auc", n = 5)
 
 #Select and view the best model
 best_k <- knn_tuning %>% select_best(metric = 'roc_auc')
@@ -270,8 +280,12 @@ knn_predictions <- last_fit_knn %>%
   collect_predictions()
 knn_predictions
 
-knn_predictions %>% roc_curve(truth = loan_default, estimate = .pred_yes) %>%
-  autoplot()
+roc_curve_data <- roc_curve(knn_predictions, 
+                             truth = loan_default, 
+                             .pred_yes)
+
+# Plot the ROC curve
+autoplot(roc_curve_data)
 
 roc_auc(knn_predictions, truth = loan_default, .pred_yes)
 
@@ -308,7 +322,8 @@ tree_tuning <- tree_workflow %>%
             grid = tree_grid)
 
 #Show top 5 best tree based on ROC AUC
-tree_tuning %>% show_best('roc_auc')
+# Show the top models for ROC AUC
+best_models <- tree_tuning %>% show_best(metric = "roc_auc", n = 5)
 
 #Select the best model and show it
 best_tree <- tree_tuning %>%
@@ -349,7 +364,9 @@ tree_predictions <- tree_last_fit %>%
 tree_predictions
 
 #ROC Curve
-tree_predictions %>% roc_curve(truth = loan_default, estimate = .pred_yes) %>%
+# ROC Curve
+tree_predictions %>% 
+  roc_curve(truth = loan_default, .pred_yes) %>% 
   autoplot()
 
 roc_auc(tree_predictions, truth = loan_default, .pred_yes)
